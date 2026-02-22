@@ -1,0 +1,876 @@
+<html lang="zh-CN"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数独游戏 - 挑战您的智慧</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    :root { --primary-color: #ec4899; --secondary-color: #f472b6; --success-color: #10b981; --glass-bg: rgba(255, 255, 255, 0.7); }
+    body { background: linear-gradient(135deg, #ffe4ed 0%, #fff0f5 100%); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto; min-height: 100vh; }
+    .glass { backdrop-filter: blur(10px); background: var(--glass-bg); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; }
+    .gradient-text { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .sudoku-board { display: grid; grid-template-columns: repeat(9, 1fr); gap: 0; background: white; border: 3px solid var(--primary-color); border-radius: 8px; overflow: hidden; box-shadow: 0 10px 40px rgba(236, 72, 153, 0.2); max-width: 450px; margin: 0 auto; }
+    .sudoku-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb; background: white; }
+    .sudoku-cell:nth-child(3n) { border-right: 2px solid var(--primary-color); }
+    .sudoku-cell:nth-child(n+19):nth-child(-n+27), .sudoku-cell:nth-child(n+46):nth-child(-n+54), .sudoku-cell:nth-child(n+73):nth-child(-n+81) { border-bottom: 2px solid var(--primary-color); }
+    .sudoku-cell input { width: 100%; height: 100%; border: none; text-align: center; font-size: 20px; font-weight: bold; background: transparent; color: var(--primary-color); padding: 0; }
+    .sudoku-cell input:focus { outline: none; background: rgba(236, 72, 153, 0.1); }
+    .sudoku-cell input:disabled { background: #f3f4f6; color: #374151; cursor: default; }
+    .sudoku-cell input.error { background: rgba(239, 68, 68, 0.2); }
+    .btn { padding: 8px 16px; border-radius: 6px; border: none; font-weight: 600; cursor: pointer; transition: all 0.3s; font-size: 14px; }
+    .btn-primary { background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(236, 72, 153, 0.3); }
+    .btn-secondary { background: white; color: var(--primary-color); border: 2px solid var(--primary-color); }
+    .btn-secondary:hover:not(:disabled) { background: rgba(236, 72, 153, 0.1); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-primary { background: rgba(236, 72, 153, 0.2); color: var(--primary-color); }
+    .badge-success { background: rgba(16, 185, 129, 0.2); color: var(--success-color); }
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center; overflow-y: auto; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; border-radius: 12px; padding: 30px; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); margin: 20px; animation: slideUp 0.3s ease; }
+    @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .stat-box { background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(244, 114, 182, 0.1)); padding: 15px; border-radius: 8px; text-align: center; }
+    .stat-value { font-size: 24px; font-weight: bold; color: var(--primary-color); }
+    .stat-label { font-size: 12px; color: #6b7280; margin-top: 5px; }
+    .game-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 400px; gap: 20px; text-align: center; }
+    .size-btn { padding: 8px 16px; border-radius: 6px; border: 2px solid #e5e7eb; background: white; cursor: pointer; font-weight: 600; }
+    .size-btn.active { border-color: var(--primary-color); background: rgba(236, 72, 153, 0.1); color: var(--primary-color); }
+    .difficulty-btn { padding: 12px 20px; border-radius: 8px; border: 2px solid #e5e7eb; background: white; cursor: pointer; font-weight: 600; width: 100%; text-align: left; }
+    .difficulty-btn.active { border-color: var(--primary-color); background: rgba(236, 72, 153, 0.1); }
+    .task-item { background: white; padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid var(--primary-color); display: flex; justify-content: space-between; align-items: center; }
+    .task-item.completed { opacity: 0.6; border-left-color: var(--success-color); }
+    .task-btn { padding: 4px 12px; font-size: 12px; border-radius: 4px; cursor: pointer; border: none; font-weight: 600; transition: all 0.3s; }
+    .task-btn-claim { background: var(--primary-color); color: white; }
+    .task-btn-claim:hover:not(:disabled) { transform: scale(1.05); }
+    .task-btn-claim:disabled { opacity: 0.5; cursor: not-allowed; }
+    .task-btn-claimed { background: var(--success-color); color: white; cursor: default; }
+    .notification { position: fixed; top: 20px; right: 20px; background: white; padding: 16px 20px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); z-index: 2000; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
+    .xp-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); transition: width 0.3s; }
+    .success-page { text-align: center; padding: 40px 20px; }
+    .success-icon { font-size: 120px; margin-bottom: 20px; animation: bounce 0.6s ease; }
+    @keyframes bounce { 0% { transform: scale(0.3); opacity: 0; } 50% { opacity: 1; } 70% { transform: scale(1.05); } 100% { transform: scale(1); } }
+    .success-title { font-size: 32px; font-weight: bold; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 10px; }
+    .success-stats { background: #fff9e6; border-radius: 12px; padding: 20px; margin: 20px 0; text-align: left; }
+    .success-stat-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .success-btn-group { display: flex; gap: 12px; margin-top: 20px; }
+    .user-section { padding: 20px; background: white; border-radius: 8px; margin-bottom: 20px; }
+    .user-header { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
+    .user-avatar { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); display: flex; align-items: center; justify-content: center; font-size: 40px; }
+    .user-info { flex: 1; }
+    .lock-badge { background: #fbbf24; color: #78350f; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; margin-left: 8px; }
+    .solver-info { background: #fef3c7; border-left: 4px solid #fbbf24; padding: 12px; border-radius: 4px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <header class="glass sticky top-0 z-50 p-4 mb-4">
+    <div class="max-w-6xl mx-auto flex justify-between items-center flex-wrap gap-4">
+      <h1 class="text-2xl font-bold gradient-text">🎮 数独游戏</h1>
+      <div class="flex gap-3 items-center flex-wrap">
+        <span id="userInfo" class="text-sm font-semibold">初学者 | Lv.1</span>
+        <button onclick="openTools()" class="btn btn-secondary">🧰 工具箱</button>
+        <button onclick="openLeaderboard()" class="btn btn-secondary">🏆 排行榜</button>
+        <button onclick="openUserCenter()" class="btn btn-secondary">👤 个人中心</button>
+        <button onclick="openSettings()" class="btn btn-secondary">⚙️ 设置</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 pb-8">
+    <div class="grid md:grid-cols-3 gap-6 mb-6">
+      <div class="md:col-span-2">
+        <div class="glass p-6">
+          <div class="mb-4 flex justify-between items-center flex-wrap gap-3">
+            <div>
+              <h2 class="text-xl font-bold mb-2">当前游戏</h2>
+              <div class="flex gap-2 flex-wrap">
+                <span class="badge badge-primary" id="difficultyBadge">待开始</span>
+                <span class="badge badge-primary" id="sizeBadge">待选择</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-2xl font-bold gradient-text" id="timer">00:00:00</div>
+              <div class="text-sm text-gray-600">用时</div>
+            </div>
+          </div>
+
+          <div id="gameContainer" class="mb-4">
+            <div class="game-placeholder">
+              <div style="font-size: 80px; opacity: 0.5;">🎮</div>
+              <div style="color: #6b7280; font-weight: 600;">点击"开始游戏"选择难度和大小</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+            <button onclick="showNewGameModal()" class="btn btn-primary">新游戏</button>
+            <button onclick="giveHint()" class="btn btn-secondary" id="hintBtn" disabled="">💡 提示</button>
+            <button onclick="checkBoard()" class="btn btn-primary" id="checkBtn" disabled="">✓ 检查</button>
+            <button onclick="resetGame()" class="btn btn-secondary" id="resetBtn" disabled="">🔄 重置</button>
+          </div>
+
+          <div class="text-sm text-gray-600">
+            <div>❌ 错误数: <span id="mistakeCount" class="font-bold text-red-500">0</span></div>
+            <div>✓ 进度: <span id="progress" class="font-bold text-green-500">0/0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="glass p-6 mb-6">
+          <h3 class="text-lg font-bold mb-4">📋 每日任务</h3>
+          <div id="taskContainer"></div>
+          <button onclick="doSignin()" class="btn btn-primary w-full mt-4" id="signinBtn">📅 立即签到 (+100XP)</button>
+        </div>
+
+        <div class="glass p-6">
+          <h3 class="text-lg font-bold mb-4">🏆 等级信息</h3>
+          <div class="text-center mb-4">
+            <div class="text-4xl font-bold gradient-text">Lv.<span id="levelNumber">1</span></div>
+          </div>
+          <div>
+            <div class="text-sm font-semibold mb-2">经验值进度</div>
+            <div class="xp-bar">
+              <div class="xp-bar-fill" id="xpBarFill" style="width: 0%"></div>
+            </div>
+            <div class="text-xs text-gray-600 mt-1">
+              <span id="currentXP">0</span> / <span id="nextLevelXP">5000</span> XP
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass p-6">
+      <h2 class="text-lg font-bold mb-4">📊 游戏统计</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="stat-box"><div class="stat-value" id="totalGames">0</div><div class="stat-label">完成游戏</div></div>
+        <div class="stat-box"><div class="stat-value" id="bestTime">--</div><div class="stat-label">最快速度</div></div>
+        <div class="stat-box"><div class="stat-value" id="totalXP">0</div><div class="stat-label">总经验值</div></div>
+        <div class="stat-box"><div class="stat-value" id="winRate">0%</div><div class="stat-label">通关率</div></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 成功弹窗 -->
+  <div id="successModal" class="modal">
+    <div class="modal-content">
+      <div class="success-page">
+        <div class="success-icon">🎉</div>
+        <div class="success-title">挑战成功</div>
+        <p style="color: #6b7280; margin-bottom: 20px;">你展现了出色的智力！</p>
+
+        <div class="success-stats">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 60px; opacity: 0.8; margin-bottom: 10px;">🧠</div>
+          </div>
+          <div class="success-stat-row">
+            <span>你的用时</span>
+            <span style="font-weight: bold;" id="successTime">00:05:30</span>
+          </div>
+          <div class="success-stat-row">
+            <span>最佳用时</span>
+            <span style="font-weight: bold;" id="successBestTime">00:04:20</span>
+          </div>
+          <div class="success-stat-row">
+            <span>XP奖励</span>
+            <span style="font-weight: bold; color: var(--primary-color);" id="successXP">+1000</span>
+          </div>
+          <div class="success-stat-row">
+            <span>错误数</span>
+            <span style="font-weight: bold;" id="successMistakes">2</span>
+          </div>
+          <div class="success-stat-row">
+            <span>提示数</span>
+            <span style="font-weight: bold;" id="successHints">0</span>
+          </div>
+        </div>
+
+        <div style="background: #f9fafb; border-radius: 8px; padding: 15px; margin-bottom: 20px; font-size: 13px; color: #374151; text-align: left;">
+          <h4 style="font-weight: bold; margin-bottom: 8px;">💡 特殊规则：</h4>
+          <div>• 时间最高纪录外奖励15%</div>
+          <div>• 零错误成功奖励20%</div>
+          <div>• 首个提示免费，后续每提示10XP</div>
+        </div>
+
+        <div class="success-btn-group">
+          <button onclick="closeModal('successModal')" style="flex: 1; padding: 12px; border-radius: 50px; border: 2px solid var(--primary-color); background: white; color: var(--primary-color); font-weight: 600; cursor: pointer;">🏠</button>
+          <button onclick="showNewGameModal(); closeModal('successModal')" style="flex: 1; padding: 12px; border-radius: 50px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; border: none; font-weight: 600; cursor: pointer;">🔄</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 个人中心弹窗 -->
+  <div id="userCenterModal" class="modal">
+    <div class="modal-content" style="max-width: 700px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 class="text-2xl font-bold">👤 个人中心</h2>
+        <button onclick="closeModal('userCenterModal')" style="border: none; background: none; cursor: pointer; font-size: 20px;">✕</button>
+      </div>
+
+      <div class="user-section">
+        <div class="user-header">
+          <div class="user-avatar">👤</div>
+          <div class="user-info">
+            <input type="text" id="usernameInput" placeholder="输入用户名" style="font-size: 18px; font-weight: bold; border: none; border-bottom: 2px solid var(--primary-color); padding: 5px 0; width: 100%; margin-bottom: 10px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <span class="badge badge-primary" id="userLevelBadge">❤️ Lv.1</span>
+              <span style="font-size: 12px; color: #6b7280;">初学者级别</span>
+            </div>
+            <div style="margin-top: 8px; font-size: 12px; color: #6b7280;">当前 <span id="userXPDisplay">0</span> / 5000 XP</div>
+            <div class="xp-bar" style="margin-top: 8px;">
+              <div class="xp-bar-fill" id="userXPBar" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+          <div class="stat-box">
+            <div class="stat-value" id="userStatsGames">0</div>
+            <div class="stat-label">游戏次数</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="userStatsWins">0</div>
+            <div class="stat-label">胜利次数</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" id="userStatsAvgTime">--</div>
+            <div class="stat-label">平均耗时</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="user-section">
+        <h3 class="text-lg font-bold mb-4">🏆 成就徽章</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px;">
+          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
+            <div style="font-size: 40px; margin: 10px 0;">🌟</div>
+            <div style="font-size: 12px; font-weight: 600; color: #374151;">首次胜利</div>
+          </div>
+          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
+            <div style="font-size: 40px; margin: 10px 0;">⚡</div>
+            <div style="font-size: 12px; font-weight: 600; color: #374151;">闪电战士</div>
+          </div>
+          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
+            <div style="font-size: 40px; margin: 10px 0;">🎯</div>
+            <div style="font-size: 12px; font-weight: 600; color: #374151;">精准大师</div>
+          </div>
+          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
+            <div style="font-size: 40px; margin: 10px 0;">👑</div>
+            <div style="font-size: 12px; font-weight: 600; color: #374151;">数独王者</div>
+          </div>
+          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
+            <div style="font-size: 40px; margin: 10px 0;">🔥</div>
+            <div style="font-size: 12px; font-weight: 600; color: #374151;">连胜达人</div>
+          </div>
+          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
+            <div style="font-size: 40px; margin: 10px 0;">💎</div>
+            <div style="font-size: 12px; font-weight: 600; color: #374151;">传奇玩家</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-primary flex-1" onclick="saveUsername()">💾 保存信息</button>
+        <button class="btn btn-secondary flex-1" onclick="closeModal('userCenterModal')">✕ 关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 工具箱弹窗 -->
+  <div id="toolsModal" class="modal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 class="text-2xl font-bold">🧰 工具箱</h2>
+        <button onclick="closeModal('toolsModal')" style="border: none; background: none; cursor: pointer; font-size: 20px;">✕</button>
+      </div>
+
+      <div class="user-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 class="text-lg font-bold">🔓 求解器</h3>
+          <span class="lock-badge" id="solverLockBadge">需要 Lv.3</span>
+        </div>
+
+        <div class="solver-info" id="solverInfo">
+          <div style="font-weight: 600; color: #92400e;">🔐 此功能需要达到 3 级才能解锁</div>
+          <div style="font-size: 14px; color: #a16207; margin-top: 4px;">继续升级吧！每次完成游戏都能获得经验值。</div>
+        </div>
+
+        <button onclick="useSolver()" class="btn btn-primary w-full" id="solverBtn" disabled="">🔓 自动求解（需 Lv.3+）</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 排行榜弹窗 -->
+  <div id="leaderboardModal" class="modal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 class="text-2xl font-bold">🏆 排行榜</h2>
+        <button onclick="closeModal('leaderboardModal')" style="border: none; background: none; cursor: pointer; font-size: 20px;">✕</button>
+      </div>
+      <div id="leaderboardContent" style="padding: 20px; text-align: center; color: #6b7280;">暂无排行榜数据</div>
+    </div>
+  </div>
+
+  <!-- 新游戏弹窗 -->
+  <div id="newGameModal" class="modal">
+    <div class="modal-content">
+      <h2 class="text-2xl font-bold mb-6">开始新游戏</h2>
+      <div class="mb-6">
+        <h3 class="text-lg font-semibold mb-3">选择棋盘大小</h3>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="size-btn active" onclick="selectSize(4)">4x4</button>
+          <button class="size-btn" onclick="selectSize(6)">6x6</button>
+          <button class="size-btn" onclick="selectSize(9)">9x9</button>
+          <button class="size-btn" onclick="selectSize(99)">异形数独</button>
+        </div>
+      </div>
+
+      <div class="mb-6">
+        <h3 class="text-lg font-semibold mb-3">选择难度</h3>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button class="difficulty-btn active" onclick="selectDifficulty('easy')"><span style="display: inline-block; width: 10px; height: 10px; background: #10b981; border-radius: 50%; margin-right: 10px;"></span>简单 (500XP)</button>
+          <button class="difficulty-btn" onclick="selectDifficulty('medium')"><span style="display: inline-block; width: 10px; height: 10px; background: #f59e0b; border-radius: 50%; margin-right: 10px;"></span>中等 (1000XP)</button>
+          <button class="difficulty-btn" onclick="selectDifficulty('hard')"><span style="display: inline-block; width: 10px; height: 10px; background: #f97316; border-radius: 50%; margin-right: 10px;"></span>困难 (2500XP)</button>
+          <button class="difficulty-btn" onclick="selectDifficulty('expert')"><span style="display: inline-block; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; margin-right: 10px;"></span>专家 (4000XP)</button>
+          <button class="difficulty-btn" onclick="selectDifficulty('hell')"><span style="display: inline-block; width: 10px; height: 10px; background: #7c3aed; border-radius: 50%; margin-right: 10px;"></span>地狱 (5000XP)</button>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <button onclick="startNewGame()" class="btn btn-primary flex-1">开始游戏</button>
+        <button onclick="closeModal('newGameModal')" class="btn btn-secondary flex-1">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 class="text-2xl font-bold">⚙️ 设置</h2>
+        <button onclick="closeModal('settingsModal')" style="border: none; background: none; cursor: pointer; font-size: 20px;">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <label style="display: flex; align-items: center; cursor: pointer;">
+          <input type="checkbox" id="soundToggle" style="margin-right: 8px;" onchange="toggleSound()">
+          <span style="font-weight: 600;">游戏音效</span>
+        </label>
+        <button onclick="saveSettings()" class="btn btn-primary">保存设置</button>
+        <button onclick="resetAllData()" class="btn btn-secondary">重置所有数据</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let selectedSize = 9, selectedDifficulty = 'easy';
+
+    const GameData = {
+      get() {
+        const data = localStorage.getItem('sudoku_game_data');
+        return data ? JSON.parse(data) : { 
+          username: '初学者', level: 1, xp: 0, totalXP: 0, 
+          stats: { totalGames: 0, wins: 0, totalTime: 0, bestTime: null, totalXPEarned: 0, hardGames: 0 },
+          tasks: { task2_claimed: false, task3_claimed: false },
+          settings: { sound: true } 
+        };
+      },
+      set(data) { localStorage.setItem('sudoku_game_data', JSON.stringify(data)); },
+      getLastSigninDate() { return localStorage.getItem('last_signin_date'); },
+      setLastSigninDate(date) { localStorage.setItem('last_signin_date', date); }
+    };
+
+    const XPSystem = {
+      // 根据难度和大小直接定义XP值
+      calc(difficulty, size) {
+        const xpTable = {
+          4: { easy: 100, medium: 200, hard: 500, expert: 800, hell: 1000 },
+          6: { easy: 220, medium: 440, hard: 1100, expert: 1760, hell: 2200 },
+          9: { easy: 400, medium: 800, hard: 2000, expert: 3200, hell: 4000 },
+          99: { easy: 625, medium: 1250, hard: 3125, expert: 5000, hell: 6250 }
+        };
+        return xpTable[size]?.[difficulty] || 0;
+      },
+      getName(difficulty) {
+        const names = { easy: '简单', medium: '中等', hard: '困难', expert: '专家', hell: '地狱' };
+        return names[difficulty] || difficulty;
+      }
+    };
+
+    const SudokuGame = {
+      board: [], solution: [], size: 9, difficulty: 'easy', mistakes: 0, hints: 0, startTime: 0, timerInterval: null, isGameActive: false,
+
+      generate(size, difficulty) {
+        this.size = size;
+        this.difficulty = difficulty;
+        this.solution = this.createSolution(size);
+        this.board = this.removeCells(JSON.parse(JSON.stringify(this.solution)), difficulty);
+        this.mistakes = 0;
+        this.hints = 0;
+        this.startTime = Date.now();
+        this.isGameActive = true;
+        this.render();
+        this.startTimer();
+        this.enableButtons();
+      },
+
+      createSolution(size) {
+        let board = Array(size).fill(null).map(() => Array(size).fill(0));
+        const isValid = (board, row, col, num, size) => {
+          for (let x = 0; x < size; x++) {
+            if (board[row][x] === num || board[x][col] === num) return false;
+          }
+          
+          // 特殊处理6x6数独（2x3宫格）
+          if (size === 6) {
+            const boxRow = Math.floor(row / 2) * 2;
+            const boxCol = Math.floor(col / 3) * 3;
+            for (let i = boxRow; i < boxRow + 2; i++) {
+              for (let j = boxCol; j < boxCol + 3; j++) {
+                if (board[i][j] === num) return false;
+              }
+            }
+          } else {
+            // 标准正方形宫格
+            const boxSize = size === 4 ? 2 : 3;
+            const boxRow = Math.floor(row / boxSize) * boxSize;
+            const boxCol = Math.floor(col / boxSize) * boxSize;
+            for (let i = boxRow; i < boxRow + boxSize; i++) {
+              for (let j = boxCol; j < boxCol + boxSize; j++) {
+                if (board[i][j] === num) return false;
+              }
+            }
+          }
+          return true;
+        };
+        const solve = (board) => {
+          for (let row = 0; row < size; row++) {
+            for (let col = 0; col < size; col++) {
+              if (board[row][col] === 0) {
+                const nums = [...Array(size).keys()].map(i => i + 1).sort(() => Math.random() - 0.5);
+                for (let num of nums) {
+                  if (isValid(board, row, col, num, size)) {
+                    board[row][col] = num;
+                    if (solve(board)) return true;
+                    board[row][col] = 0;
+                  }
+                }
+                return false;
+              }
+            }
+          }
+          return true;
+        };
+        solve(board);
+        return board;
+      },
+
+      removeCells(board, difficulty) {
+        const size = board.length;
+        const cellsToRemove = { easy: Math.floor(size * size * 0.3), medium: Math.floor(size * size * 0.5), hard: Math.floor(size * size * 0.6), expert: Math.floor(size * size * 0.7), hell: Math.floor(size * size * 0.8) };
+        const removeCount = cellsToRemove[difficulty] || cellsToRemove.easy;
+        let removed = 0;
+        while (removed < removeCount) {
+          const row = Math.floor(Math.random() * size);
+          const col = Math.floor(Math.random() * size);
+          if (board[row][col] !== 0) {
+            board[row][col] = 0;
+            removed++;
+          }
+        }
+        return board;
+      },
+
+      render() {
+        const container = document.getElementById('gameContainer');
+        container.innerHTML = '';
+        const boardDiv = document.createElement('div');
+        boardDiv.className = 'sudoku-board';
+        boardDiv.style.gridTemplateColumns = `repeat(${this.size}, 1fr)`;
+        for (let i = 0; i < this.size; i++) {
+          for (let j = 0; j < this.size; j++) {
+            const cell = document.createElement('div');
+            cell.className = 'sudoku-cell';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.maxLength = 1;
+            input.id = `cell-${i}-${j}`;
+            if (this.board[i][j] !== 0) {
+              input.value = this.board[i][j];
+              input.disabled = true;
+            }
+            input.oninput = (e) => this.handleInput(e, i, j);
+            input.onkeydown = (e) => this.handleKeydown(e, i, j);
+            cell.appendChild(input);
+            boardDiv.appendChild(cell);
+          }
+        }
+        container.appendChild(boardDiv);
+        this.updateProgress();
+      },
+
+      handleInput(e, row, col) {
+        if (!this.isGameActive) return;
+        const value = e.target.value;
+        if (value && !/^[1-9]$/.test(value)) { e.target.value = ''; return; }
+        if (value) {
+          const num = parseInt(value);
+          this.board[row][col] = num;
+          if (num !== this.solution[row][col]) {
+            e.target.classList.add('error');
+            this.mistakes++;
+          } else {
+            e.target.classList.remove('error');
+          }
+        } else {
+          this.board[row][col] = 0;
+          e.target.classList.remove('error');
+        }
+        this.updateProgress();
+      },
+
+      handleKeydown(e, row, col) {
+        if (!this.isGameActive) return;
+        const keys = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+        if (keys[e.key]) {
+          e.preventDefault();
+          const [dr, dc] = keys[e.key];
+          const newRow = (row + dr + this.size) % this.size;
+          const newCol = (col + dc + this.size) % this.size;
+          document.getElementById(`cell-${newRow}-${newCol}`)?.focus();
+        }
+        if (/^[1-9]$/.test(e.key)) {
+          e.preventDefault();
+          document.getElementById(`cell-${row}-${col}`).value = e.key;
+          document.getElementById(`cell-${row}-${col}`).dispatchEvent(new Event('input'));
+        }
+      },
+
+      updateProgress() {
+        let filled = 0;
+        for (let i = 0; i < this.size; i++) {
+          for (let j = 0; j < this.size; j++) {
+            if (this.board[i][j] !== 0) filled++;
+          }
+        }
+        document.getElementById('progress').textContent = `${filled}/${this.size * this.size}`;
+        document.getElementById('mistakeCount').textContent = this.mistakes;
+      },
+
+      checkBoard() {
+        if (!this.isGameActive) return;
+        let isCorrect = true, isFull = true;
+        for (let i = 0; i < this.size; i++) {
+          for (let j = 0; j < this.size; j++) {
+            const input = document.getElementById(`cell-${i}-${j}`);
+            if (this.board[i][j] === 0) { isFull = false; } 
+            else if (this.board[i][j] !== this.solution[i][j]) { isCorrect = false; input?.classList.add('error'); }
+            else { input?.classList.remove('error'); }
+          }
+        }
+        if (isFull && isCorrect) { this.complete(); }
+        else { this.notify(isCorrect ? '⏳ 继续加油！' : '❌ 有错误！'); }
+      },
+
+      giveHint() {
+        if (!this.isGameActive) return;
+        for (let i = 0; i < this.size; i++) {
+          for (let j = 0; j < this.size; j++) {
+            if (this.board[i][j] === 0) {
+              const input = document.getElementById(`cell-${i}-${j}`);
+              input.value = this.solution[i][j];
+              this.board[i][j] = this.solution[i][j];
+              this.hints++;
+              this.updateProgress();
+              return;
+            }
+          }
+        }
+      },
+
+      resetGame() {
+        if (!this.isGameActive || !confirm('确定重置？')) return;
+        for (let i = 0; i < this.size; i++) {
+          for (let j = 0; j < this.size; j++) {
+            const input = document.getElementById(`cell-${i}-${j}`);
+            if (!input.disabled) { input.value = ''; this.board[i][j] = 0; input.classList.remove('error'); }
+          }
+        }
+        this.mistakes = 0;
+        this.updateProgress();
+      },
+
+      complete() {
+        this.isGameActive = false;
+        clearInterval(this.timerInterval);
+        const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+        const xpEarned = XPSystem.calc(this.difficulty, this.size);
+        const gameData = GameData.get();
+        gameData.xp += xpEarned;
+        gameData.totalXP += xpEarned;
+        gameData.stats.totalGames++;
+        gameData.stats.wins++;
+        gameData.stats.totalTime += elapsed;
+        if (this.difficulty === 'hard' || this.difficulty === 'expert' || this.difficulty === 'hell') {
+          gameData.stats.hardGames++;
+        }
+        if (!gameData.stats.bestTime || elapsed < gameData.stats.bestTime) gameData.stats.bestTime = elapsed;
+        gameData.stats.totalXPEarned += xpEarned;
+        gameData.level = Math.floor(gameData.xp / 5000) + 1;
+        GameData.set(gameData);
+        localStorage.setItem('leaderboard_data', JSON.stringify([...JSON.parse(localStorage.getItem('leaderboard_data') || '[]'), { username: gameData.username, xp: gameData.stats.totalXPEarned, level: gameData.level }]));
+        
+        document.getElementById('successTime').textContent = this.formatTime(elapsed);
+        document.getElementById('successXP').textContent = `+${xpEarned}`;
+        document.getElementById('successMistakes').textContent = this.mistakes;
+        document.getElementById('successHints').textContent = this.hints;
+        document.getElementById('successBestTime').textContent = this.formatTime(gameData.stats.bestTime);
+        document.getElementById('successModal').classList.add('active');
+        
+        this.updateUI();
+        this.disableButtons();
+      },
+
+      formatTime(seconds) {
+        const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${h}:${m}:${s}`;
+      },
+
+      startTimer() {
+        clearInterval(this.timerInterval);
+        this.timerInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
+          document.getElementById('timer').textContent = this.formatTime(elapsed);
+        }, 100);
+      },
+
+      notify(msg) {
+        const notif = document.createElement('div');
+        notif.className = 'notification';
+        notif.textContent = msg;
+        document.body.appendChild(notif);
+        setTimeout(() => notif.remove(), 3000);
+      },
+
+      enableButtons() {
+        document.getElementById('hintBtn').disabled = false;
+        document.getElementById('checkBtn').disabled = false;
+        document.getElementById('resetBtn').disabled = false;
+      },
+
+      disableButtons() {
+        document.getElementById('hintBtn').disabled = true;
+        document.getElementById('checkBtn').disabled = true;
+        document.getElementById('resetBtn').disabled = true;
+      },
+
+      updateUI() {
+        const gameData = GameData.get();
+        const level = Math.floor(gameData.xp / 5000) + 1;
+        const xpInLevel = gameData.xp % 5000;
+        document.getElementById('userInfo').textContent = `${gameData.username} | Lv.${level}`;
+        document.getElementById('levelNumber').textContent = level;
+        document.getElementById('currentXP').textContent = xpInLevel;
+        document.getElementById('xpBarFill').style.width = (xpInLevel / 5000 * 100) + '%';
+        document.getElementById('totalGames').textContent = gameData.stats.totalGames;
+        document.getElementById('bestTime').textContent = gameData.stats.bestTime ? this.formatTime(gameData.stats.bestTime) : '--';
+        document.getElementById('totalXP').textContent = gameData.stats.totalXPEarned;
+        const winRate = gameData.stats.totalGames > 0 ? Math.round((gameData.stats.wins / gameData.stats.totalGames) * 100) : 0;
+        document.getElementById('winRate').textContent = winRate + '%';
+        document.getElementById('usernameInput').value = gameData.username;
+        document.getElementById('userLevelBadge').textContent = `❤️ Lv.${level}`;
+        document.getElementById('userXPBar').style.width = (xpInLevel / 5000 * 100) + '%';
+        document.getElementById('userXPDisplay').textContent = xpInLevel;
+        document.getElementById('userStatsGames').textContent = gameData.stats.totalGames;
+        document.getElementById('userStatsWins').textContent = gameData.stats.wins;
+        document.getElementById('userStatsAvgTime').textContent = gameData.stats.totalGames > 0 ? this.formatTime(Math.floor(gameData.stats.totalTime / gameData.stats.totalGames)) : '--';
+        updateToolsUI(level);
+        updateTaskUI();
+      }
+    };
+
+    function updateTaskUI() {
+      const container = document.getElementById('taskContainer');
+      const gameData = GameData.get();
+      const today = new Date().toLocaleDateString();
+      const lastSignin = GameData.getLastSigninDate();
+      const signed = lastSignin === today;
+
+      container.innerHTML = `
+        <div class="task-item ${signed ? 'completed' : ''}">
+          <div>
+            <div style="font-weight: 600;">每日签到</div>
+            <div style="font-size: 12px; color: #6b7280;">每天登录游戏</div>
+          </div>
+          <div class="badge ${signed ? 'badge-success' : 'badge-primary'}">
+            ${signed ? '✓ 已完成' : '+100XP'}
+          </div>
+        </div>
+        <div class="task-item ${gameData.stats.totalGames > 0 ? 'completed' : ''}">
+          <div>
+            <div style="font-weight: 600;">完成一局游戏</div>
+            <div style="font-size: 12px; color: #6b7280;">完成任意难度游戏</div>
+          </div>
+          ${gameData.stats.totalGames > 0 && !gameData.tasks.task2_claimed ? 
+            `<button class="task-btn task-btn-claim" onclick="claimTask('task2')">领取 +250XP</button>` :
+            gameData.tasks.task2_claimed ? 
+            `<button class="task-btn task-btn-claimed" disabled>✓ 已领取</button>` :
+            `<div class="badge badge-primary">+250XP</div>`
+          }
+        </div>
+        <div class="task-item ${gameData.stats.hardGames > 0 ? 'completed' : ''}">
+          <div>
+            <div style="font-weight: 600;">挑战困难模式</div>
+            <div style="font-size: 12px; color: #6b7280;">完成困难难度游戏</div>
+          </div>
+          ${gameData.stats.hardGames > 0 && !gameData.tasks.task3_claimed ? 
+            `<button class="task-btn task-btn-claim" onclick="claimTask('task3')">领取 +500XP</button>` :
+            gameData.tasks.task3_claimed ? 
+            `<button class="task-btn task-btn-claimed" disabled>✓ 已领取</button>` :
+            `<div class="badge badge-primary">+500XP</div>`
+          }
+        </div>
+      `;
+
+      const signinBtn = document.getElementById('signinBtn');
+      if (signed) {
+        signinBtn.disabled = true;
+        signinBtn.textContent = '✓ 今日已签到';
+      } else {
+        signinBtn.disabled = false;
+        signinBtn.textContent = '📅 立即签到 (+100XP)';
+      }
+    }
+
+    function claimTask(taskId) {
+      const gameData = GameData.get();
+      
+      if (taskId === 'task2' && gameData.stats.totalGames > 0 && !gameData.tasks.task2_claimed) {
+        gameData.xp += 250;
+        gameData.stats.totalXPEarned += 250;
+        gameData.tasks.task2_claimed = true;
+        GameData.set(gameData);
+        SudokuGame.notify('✅ 任务完成！获得 +250XP');
+        SudokuGame.updateUI();
+      } else if (taskId === 'task3' && gameData.stats.hardGames > 0 && !gameData.tasks.task3_claimed) {
+        gameData.xp += 500;
+        gameData.stats.totalXPEarned += 500;
+        gameData.tasks.task3_claimed = true;
+        GameData.set(gameData);
+        SudokuGame.notify('✅ 任务完成！获得 +500XP');
+        SudokuGame.updateUI();
+      } else {
+        SudokuGame.notify('❌ 任务未完成或已领取！');
+      }
+    }
+
+    function updateToolsUI(level) {
+      const solverBtn = document.getElementById('solverBtn');
+      const solverInfo = document.getElementById('solverInfo');
+      const isUnlocked = level >= 3;
+      solverBtn.disabled = !isUnlocked;
+      if (isUnlocked) {
+        solverBtn.textContent = '🔓 自动求解';
+        solverInfo.innerHTML = '<div style="font-weight: 600; color: #92400e;">✅ 求解器已解锁</div><div style="font-size: 14px; color: #a16207; margin-top: 4px;">你已达到 3 级，可使用求解器！</div>';
+        solverInfo.style.background = '#d1fae5';
+      }
+    }
+
+    function useSolver() {
+      const gameData = GameData.get();
+      const level = Math.floor(gameData.xp / 5000) + 1;
+      if (level < 3 || !SudokuGame.isGameActive) {
+        SudokuGame.notify('❌ 无法使用');
+        return;
+      }
+      for (let i = 0; i < SudokuGame.size; i++) {
+        for (let j = 0; j < SudokuGame.size; j++) {
+          if (SudokuGame.board[i][j] === 0) {
+            const input = document.getElementById(`cell-${i}-${j}`);
+            input.value = SudokuGame.solution[i][j];
+            SudokuGame.board[i][j] = SudokuGame.solution[i][j];
+          }
+        }
+      }
+      SudokuGame.updateProgress();
+      setTimeout(() => SudokuGame.complete(), 500);
+    }
+
+    function showNewGameModal() { document.getElementById('newGameModal').classList.add('active'); }
+    function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
+    function selectSize(size) { 
+      document.querySelectorAll('.size-btn').forEach(btn => btn.classList.remove('active')); 
+      const button = event.target;
+      button.classList.add('active'); 
+      selectedSize = size;
+      if (size === 99) {
+        button.disabled = true;
+        button.textContent = '异形数独 (待开发)';
+        button.style.opacity = '0.6';
+        button.style.cursor = 'not-allowed';
+        SudokuGame.notify('🚧 异形数独功能正在开发中，请稍后再试！');
+      }
+    }
+    function selectDifficulty(difficulty) { 
+      document.querySelectorAll('.difficulty-btn').forEach(btn => btn.classList.remove('active')); 
+      const button = event.target;
+      button.classList.add('active'); 
+      selectedDifficulty = difficulty; 
+    }
+    function startNewGame() {
+      document.getElementById('difficultyBadge').textContent = XPSystem.getName(selectedDifficulty);
+      document.getElementById('sizeBadge').textContent = selectedSize === 99 ? '异形数独' : `${selectedSize}x${selectedSize}`;
+      SudokuGame.generate(selectedSize, selectedDifficulty);
+      closeModal('newGameModal');
+    }
+    function giveHint() { SudokuGame.giveHint(); }
+    function checkBoard() { SudokuGame.checkBoard(); }
+    function resetGame() { SudokuGame.resetGame(); }
+    function openTools() { document.getElementById('toolsModal').classList.add('active'); }
+    function openLeaderboard() { document.getElementById('leaderboardModal').classList.add('active'); }
+    function openUserCenter() { document.getElementById('userCenterModal').classList.add('active'); }
+    function openSettings() { document.getElementById('settingsModal').classList.add('active'); document.getElementById('soundToggle').checked = GameData.get().settings.sound; }
+    function saveUsername() { const gameData = GameData.get(); gameData.username = document.getElementById('usernameInput').value.trim() || '初学者'; GameData.set(gameData); SudokuGame.updateUI(); alert('✓ 已保存'); }
+    function toggleSound() { const gameData = GameData.get(); gameData.settings.sound = !gameData.settings.sound; GameData.set(gameData); }
+    function saveSettings() { alert('✓ 设置已保存'); closeModal('settingsModal'); }
+    function resetAllData() { if (confirm('确定重置所有数据？')) { localStorage.clear(); location.reload(); } }
+    function doSignin() {
+      const today = new Date().toLocaleDateString();
+      const lastSignin = GameData.getLastSigninDate();
+      
+      if (lastSignin === today) {
+        SudokuGame.notify('✓ 今日已签到！');
+        return;
+      }
+
+      GameData.setLastSigninDate(today);
+      const gameData = GameData.get();
+      gameData.xp += 100;
+      gameData.stats.totalXPEarned += 100;
+      GameData.set(gameData);
+      SudokuGame.notify('✅ 签到成功 +100XP');
+      SudokuGame.updateUI();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const gameData = GameData.get();
+      if (!gameData.tasks) {
+        gameData.tasks = { task2_claimed: false, task3_claimed: false };
+        GameData.set(gameData);
+      }
+      
+      SudokuGame.updateUI();
+      SudokuGame.disableButtons();
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) modal.classList.remove('active');
+        });
+      });
+    });
+  </script>
+
+</body></html>
