@@ -794,6 +794,44 @@
     function openLeaderboard() { document.getElementById('leaderboardModal').classList.add('active'); displayLeaderboard(); }
     function openUserCenter() { document.getElementById('userCenterModal').classList.add('active'); }
     function saveUsername() { const gameData = GameData.get(); gameData.username = document.getElementById('usernameInput').value.trim() || '初学者'; GameData.set(gameData); SudokuGame.updateUI(); alert('✓ 已保存'); }
+    function openTools() { 
+  document.getElementById('toolsModal').classList.add('active'); 
+  updateToolsUI();
+}
+
+function updateToolsUI() {
+  const gameData = GameData.get();
+  const level = Math.floor(gameData.xp / 5000) + 1;
+  const solverBtn = document.getElementById('solverBtn');
+  const solverInfo = document.getElementById('solverInfo');
+  const isUnlocked = level >= 3;
+  solverBtn.disabled = !isUnlocked;
+  if (isUnlocked) {
+    solverBtn.textContent = '🔓 自动求解';
+    solverInfo.innerHTML = '<div style="font-weight: 600; color: #92400e;">✅ 求解器已解锁</div><div style="font-size: 14px; color: #a16207; margin-top: 4px;">你已达到 3 级，可使用求解器！</div>';
+    solverInfo.style.background = '#d1fae5';
+  }
+}
+
+  function useSolver() {
+    const gameData = GameData.get();
+    const level = Math.floor(gameData.xp / 5000) + 1;
+    if (level < 3 || !SudokuGame.isGameActive) {
+      SudokuGame.notify('❌ 无法使用');
+      return;
+    }
+    for (let i = 0; i < SudokuGame.size; i++) {
+      for (let j = 0; j < SudokuGame.size; j++) {
+        if (SudokuGame.board[i][j] === 0) {
+          const input = document.getElementById(`cell-${i}-${j}`);
+          input.value = SudokuGame.solution[i][j];
+          SudokuGame.board[i][j] = SudokuGame.solution[i][j];
+        }
+      }
+    }
+    SudokuGame.updateProgress();
+    setTimeout(() => SudokuGame.complete(), 500);
+  }
     function doSignin() {
       const today = new Date().toLocaleDateString();
       const lastSignin = GameData.getLastSigninDate();
