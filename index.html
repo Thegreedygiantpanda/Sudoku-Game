@@ -795,24 +795,35 @@
     function openUserCenter() { document.getElementById('userCenterModal').classList.add('active'); }
     function saveUsername() { const gameData = GameData.get(); gameData.username = document.getElementById('usernameInput').value.trim() || '初学者'; GameData.set(gameData); SudokuGame.updateUI(); alert('✓ 已保存'); }
     function openTools() { 
-  document.getElementById('toolsModal').classList.add('active'); 
-  updateToolsUI();
-}
+      document.getElementById('toolsModal').classList.add('active');
+      setTimeout(() => updateToolsUI(), 100);
+    }
 
 function updateToolsUI() {
   const gameData = GameData.get();
   const level = Math.floor(gameData.xp / 5000) + 1;
   const solverBtn = document.getElementById('solverBtn');
   const solverInfo = document.getElementById('solverInfo');
+  const lockBadge = document.getElementById('solverLockBadge');
+  
+  if (!solverBtn || !solverInfo) return;
+  
   const isUnlocked = level >= 3;
-  solverBtn.disabled = !isUnlocked;
+  
   if (isUnlocked) {
+    solverBtn.disabled = false;
     solverBtn.textContent = '🔓 自动求解';
     solverInfo.innerHTML = '<div style="font-weight: 600; color: #92400e;">✅ 求解器已解锁</div><div style="font-size: 14px; color: #a16207; margin-top: 4px;">你已达到 3 级，可使用求解器！</div>';
     solverInfo.style.background = '#d1fae5';
+    if (lockBadge) lockBadge.textContent = 'Lv.3+ ✓';
+  } else {
+    solverBtn.disabled = true;
+    solverBtn.textContent = '🔓 自动求解（需 Lv.3+）';
+    solverInfo.innerHTML = '<div style="font-weight: 600; color: #92400e;">🔐 此功能需要达到 3 级才能解锁</div><div style="font-size: 14px; color: #a16207; margin-top: 4px;">继续升级吧！每次完成游戏都能获得经验值。</div>';
+    solverInfo.style.background = '#fef3c7';
+    if (lockBadge) lockBadge.textContent = '需要 Lv.3';
   }
 }
-
   function useSolver() {
     const gameData = GameData.get();
     const level = Math.floor(gameData.xp / 5000) + 1;
