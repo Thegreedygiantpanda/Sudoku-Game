@@ -85,6 +85,7 @@
       <div class="flex gap-3 items-center flex-wrap">
         <span id="userInfo" class="text-sm font-semibold">初学者 | Lv.1</span>
         <button onclick="openLeaderboard()" class="btn btn-secondary">🏆 排行榜</button>
+        <button onclick="openTools()" class="btn btn-secondary">🧰 工具箱</button>
         <button onclick="openUserCenter()" class="btn btn-secondary">👤 个人中心</button>
       </div>
     </div>
@@ -261,6 +262,29 @@
     </div>
   </div>
 
+  <!-- 工具箱弹窗 -->
+  <div id="toolsModal" class="modal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 class="text-2xl font-bold">🧰 工具箱</h2>
+        <button onclick="closeModal('toolsModal')" style="border: none; background: none; cursor: pointer; font-size: 20px;">✕</button>
+      </div>
+
+      <div class="user-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h3 class="text-lg font-bold">🔓 求解器</h3>
+          <span class="lock-badge" id="solverLockBadge">需要 Lv.3</span>
+        </div>
+
+        <div class="solver-info" id="solverInfo">
+          <div style="font-weight: 600; color: #92400e;">🔐 此功能需要达到 3 级才能解锁</div>
+          <div style="font-size: 14px; color: #a16207; margin-top: 4px;">继续升级吧！每次完成游戏都能获得经验值。</div>
+        </div>
+
+        <button onclick="useSolver()" class="btn btn-primary w-full" id="solverBtn" disabled>🔓 自动求解（需 Lv.3+）</button>
+      </div>
+    </div>
+  </div>
   <!-- 排行榜弹窗 -->
   <div id="leaderboardModal" class="modal">
     <div class="modal-content">
