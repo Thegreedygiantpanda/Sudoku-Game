@@ -68,7 +68,7 @@
 <body>
   <header class="glass sticky top-0 z-50 p-4 mb-4">
     <div class="max-w-6xl mx-auto flex justify-between items-center flex-wrap gap-4">
-      <h1 class="text-2xl font-bold gradient-text">🎮 数独游戏 Beta1.0.2</h1>
+      <h1 class="text-2xl font-bold gradient-text">🎮 数独游戏 Beta 1.0.3</h1>
       <div class="flex gap-3 items-center flex-wrap">
         <span id="userInfo" class="text-sm font-semibold">初学者 | Lv.1</span>
         <button onclick="openTools()" class="btn btn-secondary">🧰 工具箱</button>
@@ -85,7 +85,7 @@
         <div class="glass p-6">
           <div class="mb-4 flex justify-between items-center flex-wrap gap-3">
             <div>
-              <h2 class="text-xl font-bold mb-2">当前游戏</h2>
+              <h2 class="text-xl font-bold mb-2">🔢数独游戏</h2>
               <div class="flex gap-2 flex-wrap">
                 <span class="badge badge-primary" id="difficultyBadge">待开始</span>
                 <span class="badge badge-primary" id="sizeBadge">待选择</span>
@@ -100,12 +100,12 @@
           <div id="gameContainer" class="mb-4">
             <div class="game-placeholder">
               <div style="font-size: 80px; opacity: 0.5;">🎮</div>
-              <div style="color: #6b7280; font-weight: 600;">点击"开始游戏"选择难度和大小</div>
+              <div style="color: #6b7280; font-weight: 600;">点击"新游戏"选择难度和大小</div>
             </div>
           </div>
 
           <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-            <button onclick="showNewGameModal()" class="btn btn-primary">新游戏</button>
+            <button onclick="showNewGameModal()" class="btn btn-primary">➕新游戏</button>
             <button onclick="giveHint()" class="btn btn-secondary" id="hintBtn" disabled="">💡 提示</button>
             <button onclick="checkBoard()" class="btn btn-primary" id="checkBtn" disabled="">✓ 检查</button>
             <button onclick="resetGame()" class="btn btn-secondary" id="resetBtn" disabled="">🔄 重置</button>
@@ -244,32 +244,9 @@
       </div>
 
       <div class="user-section">
-        <h3 class="text-lg font-bold mb-4">🏆 成就徽章</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px;">
-          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
-            <div style="font-size: 40px; margin: 10px 0;">🌟</div>
-            <div style="font-size: 12px; font-weight: 600; color: #374151;">首次胜利</div>
-          </div>
-          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
-            <div style="font-size: 40px; margin: 10px 0;">⚡</div>
-            <div style="font-size: 12px; font-weight: 600; color: #374151;">闪电战士</div>
-          </div>
-          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
-            <div style="font-size: 40px; margin: 10px 0;">🎯</div>
-            <div style="font-size: 12px; font-weight: 600; color: #374151;">精准大师</div>
-          </div>
-          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
-            <div style="font-size: 40px; margin: 10px 0;">👑</div>
-            <div style="font-size: 12px; font-weight: 600; color: #374151;">数独王者</div>
-          </div>
-          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
-            <div style="font-size: 40px; margin: 10px 0;">🔥</div>
-            <div style="font-size: 12px; font-weight: 600; color: #374151;">连胜达人</div>
-          </div>
-          <div style="background: white; border: 2px solid var(--primary-color); border-radius: 8px; padding: 10px; text-align: center; cursor: pointer;">
-            <div style="font-size: 40px; margin: 10px 0;">💎</div>
-            <div style="font-size: 12px; font-weight: 600; color: #374151;">传奇玩家</div>
-          </div>
+        <h3 class="text-lg font-bold mb-4">🏆 成就徽章(敬请期待)</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px;" id="achievementsGrid">
+          <!-- 成就徽章将通过JavaScript动态生成 -->
         </div>
       </div>
 
@@ -373,9 +350,17 @@
         const data = localStorage.getItem('sudoku_game_data');
         return data ? JSON.parse(data) : { 
           username: '初学者', level: 1, xp: 0, totalXP: 0, 
-          stats: { totalGames: 0, wins: 0, totalTime: 0, bestTime: null, totalXPEarned: 0, hardGames: 0 },
-          tasks: { task2_claimed: false, task3_claimed: false },
-          settings: { sound: true } 
+          stats: { totalGames: 0, wins: 0, totalTime: 0, bestTime: null, totalXPEarned: 0, hardGames: 0, hellGames: 0 },
+          tasks: { task2_claimed: false, task3_claimed: false, task4_claimed: false },
+          settings: { sound: true },
+          achievements: { 
+            firstWin: false, 
+            speedster: false, 
+            precision: false, 
+            sudokuKing: false, 
+            streakMaster: false, 
+            legend: false 
+          }
         };
       },
       set(data) { localStorage.setItem('sudoku_game_data', JSON.stringify(data)); },
@@ -638,12 +623,26 @@
         gameData.stats.totalGames++;
         gameData.stats.wins++;
         gameData.stats.totalTime += elapsed;
+        
+        // 循环任务：每次完成特殊难度都可以领取奖励
         if (this.difficulty === 'hard' || this.difficulty === 'expert' || this.difficulty === 'hell') {
-          gameData.stats.hardGames++;
+          gameData.stats.hardGames++; // 每次都增加
+          // 重置任务状态为可领取
+          gameData.tasks.task3_claimed = false;
         }
+        if (this.difficulty === 'hell') {
+          gameData.stats.hellGames++; // 每次都增加
+          // 重置任务状态为可领取
+          gameData.tasks.task4_claimed = false;
+        }
+        
         if (!gameData.stats.bestTime || elapsed < gameData.stats.bestTime) gameData.stats.bestTime = elapsed;
         gameData.stats.totalXPEarned += totalXP;
         gameData.level = Math.floor(gameData.xp / 5000) + 1;
+        
+        // 检查成就
+        this.checkAchievements(gameData, elapsed);
+        
         GameData.set(gameData);
         localStorage.setItem('leaderboard_data', JSON.stringify([...JSON.parse(localStorage.getItem('leaderboard_data') || '[]'), { username: gameData.username, xp: gameData.stats.totalXPEarned, level: gameData.level }]));
         
@@ -711,6 +710,53 @@
         document.getElementById('resetBtn').disabled = true;
       },
 
+      checkAchievements(gameData, elapsed) {
+        let newAchievements = [];
+        
+        // 首次胜利
+        if (gameData.stats.wins === 1 && !gameData.achievements.firstWin) {
+          gameData.achievements.firstWin = true;
+          newAchievements.push('首次胜利');
+        }
+        
+        // 闪电战士：完成时间少于2分钟（9x9）
+        if (this.size === 9 && elapsed < 120 && !gameData.achievements.speedster) {
+          gameData.achievements.speedster = true;
+          newAchievements.push('闪电战士');
+        }
+        
+        // 精准大师：零错误完成游戏
+        if (this.mistakes === 0 && !gameData.achievements.precision) {
+          gameData.achievements.precision = true;
+          newAchievements.push('精准大师');
+        }
+        
+        // 数独王者：完成10局游戏
+        if (gameData.stats.totalGames >= 10 && !gameData.achievements.sudokuKing) {
+          gameData.achievements.sudokuKing = true;
+          newAchievements.push('数独王者');
+        }
+        
+        // 连胜达人：完成5局地狱难度
+        if (gameData.stats.hellGames >= 5 && !gameData.achievements.streakMaster) {
+          gameData.achievements.streakMaster = true;
+          newAchievements.push('连胜达人');
+        }
+        
+        // 传奇玩家：达到5级
+        if (gameData.level >= 5 && !gameData.achievements.legend) {
+          gameData.achievements.legend = true;
+          newAchievements.push('传奇玩家');
+        }
+        
+        // 显示新成就通知
+        if (newAchievements.length > 0) {
+          setTimeout(() => {
+            this.notify(`🎉 恭喜获得新成就：${newAchievements.join('、')}`);
+          }, 1000);
+        }
+      },
+
       updateUI() {
         const gameData = GameData.get();
         const level = Math.floor(gameData.xp / 5000) + 1;
@@ -733,6 +779,53 @@
         document.getElementById('userStatsAvgTime').textContent = gameData.stats.totalGames > 0 ? this.formatTime(Math.floor(gameData.stats.totalTime / gameData.stats.totalGames)) : '--';
         updateToolsUI(level);
         updateTaskUI();
+        this.renderAchievements(gameData);
+      },
+
+      renderAchievements(gameData) {
+        const achievements = [
+          { id: 'firstWin', icon: '🌟', name: '首次胜利', description: '完成第一局游戏' },
+          { id: 'speedster', icon: '⚡', name: '闪电战士', description: '2分钟内完成9x9游戏' },
+          { id: 'precision', icon: '🎯', name: '精准大师', description: '零错误完成游戏' },
+          { id: 'sudokuKing', icon: '👑', name: '数独王者', description: '完成10局游戏' },
+          { id: 'streakMaster', icon: '🔥', name: '连胜达人', description: '完成5局地狱难度' },
+          { id: 'legend', icon: '💎', name: '传奇玩家', description: '达到5级' }
+        ];
+
+        const grid = document.getElementById('achievementsGrid');
+        grid.innerHTML = '';
+
+        achievements.forEach(achievement => {
+          const earned = gameData.achievements[achievement.id];
+          const badge = document.createElement('div');
+          badge.style.cssText = `
+            background: ${earned ? 'linear-gradient(135deg, #ec4899, #f472b6)' : 'white'};
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+          `;
+          badge.innerHTML = `
+            <div style="font-size: 40px; margin: 10px 0; filter: ${earned ? 'none' : 'grayscale(100%) opacity(0.5)'};">${achievement.icon}</div>
+            <div style="font-size: 12px; font-weight: 600; color: ${earned ? 'white' : '#374151'};">${achievement.name}</div>
+          `;
+          
+          // 添加悬停提示
+          badge.title = achievement.description;
+          
+          badge.addEventListener('click', () => {
+            if (earned) {
+              this.notify(`🏆 ${achievement.name}: ${achievement.description}`);
+            } else {
+              this.notify(`🔒 ${achievement.name}: ${achievement.description}`);
+            }
+          });
+
+          grid.appendChild(badge);
+        });
       }
     };
 
@@ -777,6 +870,18 @@
             `<div class="badge badge-primary">+500XP</div>`
           }
         </div>
+        <div class="task-item ${gameData.stats.hellGames > 0 ? 'completed' : ''}">
+          <div>
+            <div style="font-weight: 600;">挑战地狱级别</div>
+            <div style="font-size: 12px; color: #6b7280;">完成地狱难度游戏</div>
+          </div>
+          ${gameData.stats.hellGames > 0 && !gameData.tasks.task4_claimed ? 
+            `<button class="task-btn task-btn-claim" onclick="claimTask('task4')">领取 +5000XP</button>` :
+            gameData.tasks.task4_claimed ? 
+            `<button class="task-btn task-btn-claimed" disabled>✓ 已领取</button>` :
+            `<div class="badge badge-primary">+5000XP</div>`
+          }
+        </div>
       `;
 
       const signinBtn = document.getElementById('signinBtn');
@@ -805,6 +910,13 @@
         gameData.tasks.task3_claimed = true;
         GameData.set(gameData);
         SudokuGame.notify('✅ 任务完成！获得 +500XP');
+        SudokuGame.updateUI();
+      } else if (taskId === 'task4' && gameData.stats.hellGames > 0 && !gameData.tasks.task4_claimed) {
+        gameData.xp += 5000;
+        gameData.stats.totalXPEarned += 5000;
+        gameData.tasks.task4_claimed = true;
+        GameData.set(gameData);
+        SudokuGame.notify('🎉 任务完成！获得 +5000XP');
         SudokuGame.updateUI();
       } else {
         SudokuGame.notify('❌ 任务未完成或已领取！');
@@ -845,6 +957,7 @@
 
     function showNewGameModal() { document.getElementById('newGameModal').classList.add('active'); }
     function closeModal(modalId) { document.getElementById(modalId).classList.remove('active'); }
+    function showChangelog() { document.getElementById('changelogModal').classList.add('active'); }
     function selectSize(size) { 
       document.querySelectorAll('.size-btn').forEach(btn => btn.classList.remove('active')); 
       const button = event.target;
@@ -1152,6 +1265,81 @@
     <div class="mt-2 flex gap-2">
       <button onclick="quickInput(0)" class="flex-1 py-2 bg-red-500 text-white rounded font-medium">清空</button>
       <button onclick="hideNumberPanel()" class="flex-1 py-2 bg-gray-500 text-white rounded font-medium">关闭</button>
+    </div>
+  </div>
+
+  <!-- 更新日志按钮 -->
+  <div class="fixed bottom-4 left-4 z-50">
+    <button onclick="showChangelog()" class="w-12 h-12 bg-blue-500 text-white rounded-full shadow-lg flex items-center justify-center text-xl">
+      📝
+    </button>
+  </div>
+
+  <!-- 更新日志弹窗 -->
+  <div id="changelogModal" class="modal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 class="text-2xl font-bold">📝 更新日志</h2>
+        <button onclick="closeModal('changelogModal')" style="border: none; background: none; cursor: pointer; font-size: 20px;">✕</button>
+      </div>
+      <div class="space-y-6">
+        <div class="glass p-4">
+          <div class="text-lg font-bold text-blue-600 mb-2">v1.0.3 (最新)</div>
+          <div class="space-y-2">
+            <div class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>新增地狱级别挑战奖励任务，完成后可领取5000XP</span>
+            </div>
+            <div class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>优化任务系统，困难/地狱模式任务变为循环任务</span>
+            </div>
+            <div class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>修复成就徽章显示问题</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="glass p-4">
+          <div class="text-lg font-bold text-blue-600 mb-2">v1.0.2</div>
+          <div class="space-y-2">
+            <div class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>更新XP经验值统计系统</span>
+            </div>
+            <div class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>新增零错误完成游戏20%额外奖励</span>
+            </div>
+            <div class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>新增时间新纪录15%额外奖励</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="glass p-4">
+          <div class="text-lg font-bold text-blue-600 mb-2">v1.0.1</div>
+          <div class="space-y-2">
+            <div class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>新增成就系统，包含6个成就徽章</span>
+            </div>
+            <div class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>优化移动设备输入体验</span>
+            </div>
+            <div class="flex items-start">
+              <span class="text-green-500 mr-2">✓</span>
+              <span>修复6x6数独验证逻辑</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 text-center">
+        <button onclick="closeModal('changelogModal')" class="btn btn-primary">关闭</button>
+      </div>
     </div>
   </div>
 
