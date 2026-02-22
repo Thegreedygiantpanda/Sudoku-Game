@@ -45,6 +45,7 @@
     .task-btn-claim:hover:not(:disabled) { transform: scale(1.05); }
     .task-btn-claim:disabled { opacity: 0.5; cursor: not-allowed; }
     .task-btn-claimed { background: var(--success-color); color: white; cursor: default; }
+
     .notification { position: fixed; top: 20px; right: 20px; background: white; padding: 16px 20px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); z-index: 2000; animation: slideIn 0.3s ease; }
     @keyframes slideIn { from { transform: translateX(400px); } to { transform: translateX(0); } }
     .xp-bar { width: 100%; height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-top: 8px; }
@@ -497,6 +498,7 @@
             input.type = 'text';
             input.maxLength = 1;
             input.id = `cell-${i}-${j}`;
+            input.classList.add('sudoku-input');
             if (this.board[i][j] !== 0) {
               input.value = this.board[i][j];
               input.disabled = true;
@@ -606,10 +608,33 @@
         this.isGameActive = false;
         clearInterval(this.timerInterval);
         const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-        const xpEarned = XPSystem.calc(this.difficulty, this.size);
+        let xpEarned = XPSystem.calc(this.difficulty, this.size);
+        
+        // 计算额外奖励
+        let bonusXP = 0;
+        let bonusReasons = [];
+        
+        // 零错误奖励20%
+        if (this.mistakes === 0) {
+          const zeroMistakeBonus = Math.floor(xpEarned * 0.2);
+          bonusXP += zeroMistakeBonus;
+          bonusReasons.push(`零错误 +${zeroMistakeBonus}`);
+        }
+        
+        // 时间最高纪录奖励15%
         const gameData = GameData.get();
-        gameData.xp += xpEarned;
-        gameData.totalXP += xpEarned;
+        if (!gameData.stats.bestTime || elapsed < gameData.stats.bestTime) {
+          const timeRecordBonus = Math.floor(xpEarned * 0.15);
+          bonusXP += timeRecordBonus;
+          bonusReasons.push(`新纪录 +${timeRecordBonus}`);
+        }
+        
+        // 计算总XP
+        const totalXP = xpEarned + bonusXP;
+        
+        // 更新游戏数据
+        gameData.xp += totalXP;
+        gameData.totalXP += totalXP;
         gameData.stats.totalGames++;
         gameData.stats.wins++;
         gameData.stats.totalTime += elapsed;
@@ -617,16 +642,34 @@
           gameData.stats.hardGames++;
         }
         if (!gameData.stats.bestTime || elapsed < gameData.stats.bestTime) gameData.stats.bestTime = elapsed;
-        gameData.stats.totalXPEarned += xpEarned;
+        gameData.stats.totalXPEarned += totalXP;
         gameData.level = Math.floor(gameData.xp / 5000) + 1;
         GameData.set(gameData);
         localStorage.setItem('leaderboard_data', JSON.stringify([...JSON.parse(localStorage.getItem('leaderboard_data') || '[]'), { username: gameData.username, xp: gameData.stats.totalXPEarned, level: gameData.level }]));
         
+        // 更新成功弹窗
         document.getElementById('successTime').textContent = this.formatTime(elapsed);
-        document.getElementById('successXP').textContent = `+${xpEarned}`;
+        document.getElementById('successXP').textContent = `+${totalXP}`;
         document.getElementById('successMistakes').textContent = this.mistakes;
         document.getElementById('successHints').textContent = this.hints;
         document.getElementById('successBestTime').textContent = this.formatTime(gameData.stats.bestTime);
+        
+        // 显示额外奖励信息
+        const bonusInfoDiv = document.querySelector('.success-stats + div');
+        if (bonusReasons.length > 0) {
+          bonusInfoDiv.innerHTML = `
+            <h4 style="font-weight: bold; margin-bottom: 8px;">💡 额外奖励：</h4>
+            ${bonusReasons.map(reason => `<div>• ${reason}</div>`).join('')}
+          `;
+        } else {
+          bonusInfoDiv.innerHTML = `
+            <h4 style="font-weight: bold; margin-bottom: 8px;">💡 特殊规则：</h4>
+            <div>• 时间最高纪录外奖励15%</div>
+            <div>• 零错误成功奖励20%</div>
+            <div>• 首个提示免费，后续每提示10XP</div>
+          `;
+        }
+        
         document.getElementById('successModal').classList.add('active');
         
         this.updateUI();
@@ -821,6 +864,216 @@
       button.classList.add('active'); 
       selectedDifficulty = difficulty; 
     }
+    // 全局变量存储当前选中的格子
+    let currentSelectedCell = null;
+
+    // 初始化虚拟键盘
+    function initVirtualKeyboard() {
+      // 创建键盘HTML
+      const keyboardHTML = `
+        <div id="virtualKeyboard" class="virtual-keyboard" style="display: none;">
+          <div style="padding: 10px 0; text-align: center; font-weight: bold; color: var(--primary-color);">
+            虚拟数字键盘
+          </div>
+          <div class="keyboard-row">
+            <div class="keyboard-key" data-value="1">1</div>
+            <div class="keyboard-key" data-value="2">2</div>
+            <div class="keyboard-key" data-value="3">3</div>
+            <div class="keyboard-key" data-value="4">4</div>
+            <div class="keyboard-key" data-value="5">5</div>
+            <div class="keyboard-key" data-value="6">6</div>
+            <div class="keyboard-key" data-value="7">7</div>
+            <div class="keyboard-key" data-value="8">8</div>
+            <div class="keyboard-key" data-value="9">9</div>
+          </div>
+          <div class="keyboard-row">
+            <div class="keyboard-key delete" data-value="delete">⌫</div>
+            <div class="keyboard-key" data-value="clear">清空</div>
+            <div class="keyboard-key" data-value="hide">关闭</div>
+          </div>
+        </div>
+        <button id="keyboardToggle" class="keyboard-toggle" style="display: none;">⌨️</button>
+      `;
+      
+      // 添加到页面
+      document.body.insertAdjacentHTML('beforeend', keyboardHTML);
+      
+      // 绑定事件
+      bindKeyboardEvents();
+      
+      // 显示切换按钮
+      document.getElementById('keyboardToggle').style.display = 'block';
+    }
+
+    // 绑定键盘事件
+    function bindKeyboardEvents() {
+      // 数字键点击事件
+      document.querySelectorAll('.keyboard-key').forEach(key => {
+        key.addEventListener('click', function() {
+          const value = this.getAttribute('data-value');
+          handleKeyboardInput(value);
+        });
+      });
+      
+      // 切换按钮事件
+      document.getElementById('keyboardToggle').addEventListener('click', toggleKeyboard);
+      
+      // 为所有数独格子添加点击事件
+      document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('sudoku-input')) {
+          currentSelectedCell = e.target;
+          // 在移动设备上自动显示键盘
+          if (isMobileDevice()) {
+            showKeyboard();
+          }
+        }
+      });
+    }
+
+    // 处理键盘输入
+    function handleKeyboardInput(value) {
+      console.log('键盘输入值:', value);
+      console.log('当前选中格子:', currentSelectedCell);
+      
+      if (!currentSelectedCell) {
+        console.log('未选中格子');
+        return;
+      }
+      
+      // 检查格子是否可编辑
+      if (currentSelectedCell.disabled) {
+        console.log('格子不可编辑');
+        return;
+      }
+      
+      switch(value) {
+        case 'delete':
+        case 'clear':
+          currentSelectedCell.value = '';
+          updateGameBoard(currentSelectedCell, 0);
+          break;
+          
+        case 'hide':
+          hideKeyboard();
+          break;
+          
+        default:
+          // 数字输入
+          const num = parseInt(value);
+          const maxNum = SudokuGame.size === 4 ? 4 : (SudokuGame.size === 6 ? 6 : 9);
+          
+          if (num >= 1 && num <= maxNum) {
+            currentSelectedCell.value = value;
+            updateGameBoard(currentSelectedCell, num);
+          }
+          break;
+      }
+    }
+
+    // 更新游戏数据
+    function updateGameBoard(cell, value) {
+      const id = cell.id;
+      const [_, row, col] = id.split('-');
+      
+      // 更新游戏数据
+      SudokuGame.board[row][col] = value;
+      
+      // 检查输入是否正确
+      if (value !== 0) {
+        if (value === SudokuGame.solution[row][col]) {
+          cell.classList.remove('error');
+        } else {
+          cell.classList.add('error');
+          SudokuGame.mistakes++;
+        }
+      } else {
+        cell.classList.remove('error');
+      }
+      
+      // 检查游戏是否完成
+      SudokuGame.checkBoard();
+    }
+
+    // 显示键盘
+    function showKeyboard() {
+      const keyboard = document.getElementById('virtualKeyboard');
+      keyboard.style.display = 'block';
+      document.body.style.paddingBottom = '150px';
+    }
+
+    // 隐藏键盘
+    function hideKeyboard() {
+      const keyboard = document.getElementById('virtualKeyboard');
+      keyboard.style.display = 'none';
+      document.body.style.paddingBottom = '0';
+    }
+
+    // 切换键盘显示
+    function toggleKeyboard() {
+      const keyboard = document.getElementById('virtualKeyboard');
+      const isVisible = keyboard.style.display === 'block';
+      
+      if (isVisible) {
+        hideKeyboard();
+        console.log('键盘已关闭');
+        // 不显示通知，避免干扰
+      } else {
+        showKeyboard();
+        console.log('键盘已打开');
+        // 不显示通知，避免干扰
+      }
+    }
+
+    // 显示通知
+    function showNotification(message) {
+      // 创建简单的通知元素
+      const notification = document.createElement('div');
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--primary-color);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
+        z-index: 1001;
+        font-weight: 500;
+        animation: slideIn 0.3s ease-out;
+      `;
+      notification.textContent = message;
+      
+      // 添加动画样式
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideIn {
+          from { transform: translateX(100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+      
+      document.body.appendChild(notification);
+      
+      // 3秒后自动移除
+      setTimeout(() => {
+        notification.style.animation = 'slideIn 0.3s ease-in reverse';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+          }
+          if (style.parentNode) {
+            style.parentNode.removeChild(style);
+          }
+        }, 300);
+      }, 3000);
+    }
+
+    // 检测移动设备
+    function isMobileDevice() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
     function startNewGame() {
       document.getElementById('difficultyBadge').textContent = XPSystem.getName(selectedDifficulty);
       document.getElementById('sizeBadge').textContent = selectedSize === 99 ? '异形数独' : `${selectedSize}x${selectedSize}`;
@@ -870,7 +1123,36 @@
           if (e.target === modal) modal.classList.remove('active');
         });
       });
+      
+      // 初始化虚拟键盘
+      initVirtualKeyboard();
     });
   </script>
+
+  <!-- 简化的数字选择器 -->
+  <div id="numberSelector" class="fixed bottom-4 right-4 z-50">
+    <button onclick="showNumberPanel()" class="w-12 h-12 bg-pink-500 text-white rounded-full shadow-lg flex items-center justify-center text-xl">
+      1-9
+    </button>
+  </div>
+
+  <!-- 数字面板 -->
+  <div id="numberPanel" class="fixed bottom-20 right-4 bg-white rounded-lg shadow-xl p-3 z-50 hidden">
+    <div class="grid grid-cols-3 gap-2">
+      <button onclick="quickInput(1)" class="w-10 h-10 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-500 hover:text-white transition-colors">1</button>
+      <button onclick="quickInput(2)" class="w-10 h-10 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-500 hover:text-white transition-colors">2</button>
+      <button onclick="quickInput(3)" class="w-10 h-10 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-500 hover:text-white transition-colors">3</button>
+      <button onclick="quickInput(4)" class="w-10 h-10 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-500 hover:text-white transition-colors">4</button>
+      <button onclick="quickInput(5)" class="w-10 h-10 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-500 hover:text-white transition-colors">5</button>
+      <button onclick="quickInput(6)" class="w-10 h-10 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-500 hover:text-white transition-colors">6</button>
+      <button onclick="quickInput(7)" class="w-10 h-10 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-500 hover:text-white transition-colors">7</button>
+      <button onclick="quickInput(8)" class="w-10 h-10 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-500 hover:text-white transition-colors">8</button>
+      <button onclick="quickInput(9)" class="w-10 h-10 border-2 border-pink-500 rounded text-lg font-bold hover:bg-pink-500 hover:text-white transition-colors">9</button>
+    </div>
+    <div class="mt-2 flex gap-2">
+      <button onclick="quickInput(0)" class="flex-1 py-2 bg-red-500 text-white rounded font-medium">清空</button>
+      <button onclick="hideNumberPanel()" class="flex-1 py-2 bg-gray-500 text-white rounded font-medium">关闭</button>
+    </div>
+  </div>
 
 </body></html>
