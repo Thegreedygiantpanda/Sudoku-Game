@@ -4,7 +4,7 @@
 
 ## 🚀 在线演示
 
-🔗 **游戏链接**: [https://thegreedygiantpanda.github.io/Sudoku-Game/](https://thegreedygiantpanda.github.io/Sudoku-Game/)
+🔗 **游戏链接**: [https://tanchipanda.github.io/Sudoku-Game/](https://tanchipanda.github.io/Sudoku-Game/)
 
 ## ✨ 功能特性
 
